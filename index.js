@@ -5,7 +5,8 @@ const data = require('./data');
 // 配置
 const defaults = {
     openTag: "{{",
-    closeTag: "}}"
+    closeTag: "}}",
+    compress: false
 };
 
 
@@ -42,11 +43,71 @@ const compile = template.compile = function ( tpl ) {
 };
 
 
+function parser ( code ) {
+
+    code = code.replace( /^\s+/, '' );
+    const split = code.split(' ');
+    const key = split.shift();
+    const args = split.join(' ');
+
+    switch ( key ) {
+        case "if":
+            code = 'if ( ' + args + ' ) {';
+            break;
+
+        // else 有两种情况
+        // 1、else if ()
+        // 2、else 
+        case "else":
+            if ( split.shift() === 'if' ) {
+                code = '} else if (' + split.join(' ') + ') {';
+            } else {
+                code = '} else {'
+            }
+            break;
+        
+        case "/if":
+            code = '}';
+            break;
+
+        case "each":
+            const object = split[0] || '$data';
+            const as = split[1] || 'as';
+            const value = split[2] || '$value';
+            const index = split[3] || '$index';
+
+            code = '$each( ' + object + ', function ( ' + value + ', ' + index + ' ) {';
+            break;
+
+        case "/each":
+            code = '})';
+            break;
+
+        // 除上述情况外，其他为变量输出
+        // 对变量输出，需要先处理过滤器
+        // 另外，变量输出需要进行
+        default:
+            // helper
+            
+            // escape
+            
+            // 最后才是输出
+
+            code = '=' + code;
+            break
+    }
+
+    return code;
+
+}
+
+
 // 解析HTML
 // 在这里进行一些对HTML的编译操作
 // 代码压缩
 function html( code ) {
         
+    const compress = defaults.compress;
     // 压缩
     if ( compress ) {
         console.log( "pass" )
@@ -57,17 +118,14 @@ function html( code ) {
 
 // 解析逻辑部分
 function logic( code ) {
+    
+    code = parser( code );
 
-    code = code.replace( /^\s+/, '' );
-
-    if ( code === 'if' ) {
-        
-    } else if ( code === '' ) {
+    if ( code.indexOf('=') === 0 ) {
         
     }
-
-    return code;
 }
+
 
 template( tpl, data );
 

@@ -6,5 +6,9 @@ module.exports = [
                 "<li>索引：{{item}} - {{index}}</li>",
             "{{/each}}",
         "</ul>",
+    "{{else if !isAdmin}}",
+        "<p>else if</p>",
+    "{{else}}",
+        "<p>/if</p>",
     "{{/if}}"
 ].join('');
