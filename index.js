@@ -6,7 +6,8 @@ const data = require('./data');
 const defaults = {
     openTag: "{{",
     closeTag: "}}",
-    compress: false
+    compress: false,
+    escape: true
 };
 
 
@@ -40,6 +41,10 @@ const compile = template.compile = function ( tpl ) {
 
         }
     });
+
+    const code = 'var $out = ""; ' + mainCode;
+
+    console.log( code )
 };
 
 
@@ -49,6 +54,7 @@ function parser ( code ) {
     const split = code.split(' ');
     const key = split.shift();
     const args = split.join(' ');
+    const escape = defaults.escape;
 
     switch ( key ) {
         case "if":
@@ -90,19 +96,20 @@ function parser ( code ) {
             // helper
             
             // escape
-            
-            // 最后才是输出
-
-            code = '=' + code;
+            if ( code.indexOf('#') === 0 ) {
+                code = '=#' + code.substr(1);
+            } else {
+                code = '=' + code;
+            }
             break
     }
-
+    
     return code;
 
 }
 
 
-// 解析HTML
+// 处理HTML
 // 在这里进行一些对HTML的编译操作
 // 代码压缩
 function html( code ) {
@@ -112,18 +119,29 @@ function html( code ) {
     if ( compress ) {
         console.log( "pass" )
     }
-   
+
+    code = '$out += "' + code + '"; '
+
     return code;
 }
 
-// 解析逻辑部分
+// 处理逻辑
 function logic( code ) {
     
     code = parser( code );
 
     if ( code.indexOf('=') === 0 ) {
-        
-    }
+
+        const isEscape = defaults.escape && /^(=#)/.test( code )
+        code = code.replace(/^=[#]?|[\s;]*$/g, '');
+
+        if ( isEscape ) {
+            code = '$out += $escape( ' + code + ' );'; 
+        } else {
+            code = '$out += $string( ' + code + ' );';
+        }
+    } 
+    return code;
 }
 
 

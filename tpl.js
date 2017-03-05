@@ -7,8 +7,8 @@ module.exports = [
             "{{/each}}",
         "</ul>",
     "{{else if !isAdmin}}",
-        "<p>else if</p>",
+        "<p>没有管理员权限</p>",
     "{{else}}",
-        "<p>/if</p>",
+        "<p>非法操作</p>",
     "{{/if}}"
 ].join('');
