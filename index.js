@@ -153,7 +153,7 @@ function parser ( code ) {
 
 
 function getVariable( code ) {
-
+    
     return code;
 }
 
