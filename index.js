@@ -15,13 +15,56 @@ const template = function ( tpl, data ) {
    return compile( tpl ); 
 };
 
-let mainCode = "";
+const toString = function ( value, type ) {
+    if ( typeof value !== 'string' ) {
+        type = typeof value;
+        if ( type === 'number' ) {
+            value += '';
+        } else if ( type === 'function' ) {
+            value = toString( value.call( value ) );
+        } else {
+            value = '';
+        }
+    }
+    return value;
+}
+
+
+const isArray = Array.isArray || function ( obj ) {
+    return [].toString.call( obj ) === '[object Array]';
+}
+
+
+const each = function ( data, callback ) {
+    if ( isArray( data ) ) {
+        for ( let i = 0, len = data.length; i < len; i++ ) {
+            callback.call( data, data[i], i, data );
+        }
+    } else {
+        for ( let i in data ) {
+            callback.call( data, data[i], i );
+        }
+    }
+}
+
+const utils = template.$utils = {
+    $string: toString
+}
+
+const helpers = template.$helpers = {
+    
+}
+
+let mainCode = 'var $out = "";';
+let headerCode = '"use strict"; var $utils = this;';
+let footerCode = 'return new String( $out );';
 
 // 编译
 const compile = template.compile = function ( tpl ) {
     const openTag = defaults.openTag;
     const closeTag = defaults.closeTag;
 
+    // html与逻辑语法分离
     tpl.split( openTag ).forEach( code => {
 
         code = code.split( closeTag );
@@ -42,9 +85,9 @@ const compile = template.compile = function ( tpl ) {
         }
     });
 
-    const code = 'var $out = ""; ' + mainCode;
-
-    console.log( code )
+    const code = headerCode + mainCode +footerCode;
+    const Render = new Function( "$data", "$filename", code );
+    return Render;
 };
 
 
@@ -86,7 +129,7 @@ function parser ( code ) {
             break;
 
         case "/each":
-            code = '})';
+            code = '});';
             break;
 
         // 除上述情况外，其他为变量输出
@@ -106,6 +149,12 @@ function parser ( code ) {
     
     return code;
 
+}
+
+
+function getVariable( code ) {
+
+    return code;
 }
 
 
@@ -141,6 +190,21 @@ function logic( code ) {
             code = '$out += $string( ' + code + ' );';
         }
     } 
+
+    // 变量处理
+    each( getVariable( code ), function ( name ) {
+        let value; 
+        if ( utils[ name ] ) {
+            value = '$utils.' + name;
+        } else if ( helpers[ name ] ) {
+            value = '$helpers.' + name;
+        } else {
+            value = '$data.' + name;
+        }
+
+        headerCode += name + '=' + value + ',';
+    })
+
     return code;
 }
 
