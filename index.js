@@ -1,18 +1,13 @@
 const tpl = require('./tpl');
 const data = require('./data');
 
-
-// 配置
-const defaults = {
-    openTag: "{{",
-    closeTag: "}}",
-    compress: false,
-    escape: true
-};
+const helpers = require('./helpers');
+const utils = require('./utils');
+const defaults = require('./defaults');
 
 
 const template = function ( tpl, data ) {
-   return compile( tpl ); 
+   return compile( tpl );
 };
 
 const toString = function ( value, type ) {
@@ -47,14 +42,6 @@ const each = function ( data, callback ) {
     }
 }
 
-const utils = template.$utils = {
-    $string: toString
-}
-
-const helpers = template.$helpers = {
-    
-}
-
 let mainCode = 'var $out = "";';
 let headerCode = '"use strict"; var $utils = this;';
 let footerCode = 'return new String( $out );';
@@ -68,15 +55,15 @@ const compile = template.compile = function ( tpl ) {
     tpl.split( openTag ).forEach( code => {
 
         code = code.split( closeTag );
-        
+
         const $1 = code[0];
         const $2 = code[1];
 
         // 纯html片段 [html]
         if ( code.length === 1 ) {
-           mainCode += html( $1 ); 
+           mainCode += html( $1 );
 
-        // 业务逻辑 + html片段 [logic, html] 
+        // 业务逻辑 + html片段 [logic, html]
         } else {
 
             mainCode += logic( $1 );
@@ -106,7 +93,7 @@ function parser ( code ) {
 
         // else 有两种情况
         // 1、else if ()
-        // 2、else 
+        // 2、else
         case "else":
             if ( split.shift() === 'if' ) {
                 code = '} else if (' + split.join(' ') + ') {';
@@ -114,7 +101,7 @@ function parser ( code ) {
                 code = '} else {'
             }
             break;
-        
+
         case "/if":
             code = '}';
             break;
@@ -137,7 +124,7 @@ function parser ( code ) {
         // 另外，变量输出需要进行
         default:
             // helper
-            
+
             // escape
             if ( code.indexOf('#') === 0 ) {
                 code = '=#' + code.substr(1);
@@ -146,15 +133,44 @@ function parser ( code ) {
             }
             break
     }
-    
+
     return code;
 
 }
 
+const KEYWORDS =
+  // 关键字
+  'break, case, catch, continue, debugger, default, delete, do, else, false'
+  + ', finally, for, function, if, in, instanceof, new, null, return, switch, this'
+  + ', throw, true, try, typeof, var, void, while, with'
+
+  // 保留字
+  + ', abstract, boolean, byte, char, class, const, double, enum, export, extends'
+  + ', final, float, goto, implements, import, int, interface, long, native'
+  + ', package, private, protected, public, short, static, super, synchronized'
+  + ', throws, transient, volatile'
+
+  // ECMA 5 - use strict
+  + ', arguments, let, yield'
+
+  + ', undefined';
+
+const REMOVE_RE = /\/\*[\w\W]*?\*\/|\/\/[^\n]*\n|\/\/[^\n]*$|"(?:[^"\\]|\\[\w\W])*"|'(?:[^'\\]|\\[\w\W])*'|\s*\.\s*[$\w\.]+/g;
+const SPLIT_RE = /[^\w$]+/g;
+const KEYWORDS_RE = new RegExp(["\\b" + KEYWORDS.replace(/,/, '\\b|\\b') + "\\b"].join('|'), 'g');
+const NUMBER_RE = /^\d[^,]*,\d[^,]*/g;
+const BOUNDARY_RE = /^,+|,+$/g;
+const SPLIT2_RE = /^$|,+/;
+
 
 function getVariable( code ) {
-    
-    return code;
+    return code
+    .replace( REMOVE_RE, '' )
+    .replace( SPLIT_RE, ',' )
+    .replace( KEYWORDS_RE, '' )
+    .replace( NUMBER_RE, '' )
+    .replace( BOUNDARY_RE, '' )
+    .split( SPLIT2_RE );
 }
 
 
@@ -162,7 +178,7 @@ function getVariable( code ) {
 // 在这里进行一些对HTML的编译操作
 // 代码压缩
 function html( code ) {
-        
+
     const compress = defaults.compress;
     // 压缩
     if ( compress ) {
@@ -176,7 +192,7 @@ function html( code ) {
 
 // 处理逻辑
 function logic( code ) {
-    
+
     code = parser( code );
 
     if ( code.indexOf('=') === 0 ) {
@@ -185,15 +201,15 @@ function logic( code ) {
         code = code.replace(/^=[#]?|[\s;]*$/g, '');
 
         if ( isEscape ) {
-            code = '$out += $escape( ' + code + ' );'; 
+            code = '$out += $escape( ' + code + ' );';
         } else {
             code = '$out += $string( ' + code + ' );';
         }
-    } 
+    }
 
     // 变量处理
     each( getVariable( code ), function ( name ) {
-        let value; 
+        let value;
         if ( utils[ name ] ) {
             value = '$utils.' + name;
         } else if ( helpers[ name ] ) {
@@ -210,7 +226,3 @@ function logic( code ) {
 
 
 template( tpl, data );
-
-
-
-
